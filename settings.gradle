@@ -9,5 +9,5 @@ dependencyResolutionManagement {
         }
     }
 }
-rootProject.name = "Strand-PepperStudies-Studien"
+rootProject.name = "Strand-PepperStudies-Studien-CoronaCheck"
 include ':app'

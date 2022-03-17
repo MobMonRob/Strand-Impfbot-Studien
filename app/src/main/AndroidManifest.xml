@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.dhbw.strand_pepperstudies_studien">
+    package="com.dhbw.strand_pepperstudies_studien_CoronaCheck">
 
     <application
         android:allowBackup="true"
