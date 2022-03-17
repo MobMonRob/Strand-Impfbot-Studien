@@ -47,6 +47,8 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
     private Future<Void> localizationAndMapping;
     private ExplorationMap explorationMap;
     private Localize localize;
+    private HumanAwareness humanAwareness;
+    private QiContext _qiContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +62,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
     public void onRobotFocusGained(QiContext qiContext) {
 
         // Store the provided QiContext.
-
+        this._qiContext = qiContext;
         startMapping(qiContext);
         // Get the HumanAwareness service from the QiContext.
 
@@ -123,7 +125,25 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
             switch (status) {
                 case LOCALIZED:
                     Log.i(TAG, "Robot is localized.");
-                    break;
+
+                    humanAwareness = qiContext.getHumanAwareness();
+                    List<Human> humantoaproach = humanAwareness.getHumansAround();
+
+                    while(true) {
+                        humanAwareness = qiContext.getHumanAwareness();
+                        humantoaproach = humanAwareness.getHumansAround();
+
+                        if (!humantoaproach.isEmpty()) {
+                            ApproachHuman approachHuman = ApproachHumanBuilder.with(qiContext)
+                                    .withHuman(humantoaproach.get(0))
+                                    .build();
+
+                            approachHuman.async().run();
+
+                            retrieveCharacteristics(humantoaproach);
+                        }
+                    }
+
             }
         });
 
