@@ -50,6 +50,14 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
     private HumanAwareness humanAwareness;
     private QiContext _qiContext;
 
+    private enum state {
+        idle,
+        approachHuman,
+        goToPosition
+    }
+
+    private state _state;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -64,7 +72,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
         // Store the provided QiContext.
         this._qiContext = qiContext;
         startMapping(qiContext);
-        // Get the HumanAwareness service from the QiContext.
+
 
 
     }
@@ -129,19 +137,54 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                     humanAwareness = qiContext.getHumanAwareness();
                     List<Human> humantoaproach = humanAwareness.getHumansAround();
 
+                    _state = state.idle;
                     while(true) {
+                        SystemClock.sleep(500);
                         humanAwareness = qiContext.getHumanAwareness();
                         humantoaproach = humanAwareness.getHumansAround();
 
-                        if (!humantoaproach.isEmpty()) {
-                            ApproachHuman approachHuman = ApproachHumanBuilder.with(qiContext)
-                                    .withHuman(humantoaproach.get(0))
-                                    .build();
+                        switch (_state){
 
-                            approachHuman.async().run();
+                            case idle:
+                                Log.i(TAG, "Idle");
+                                humanAwareness = qiContext.getHumanAwareness();
+                                humantoaproach = humanAwareness.getHumansAround();
+                                if (!humantoaproach.isEmpty()) {
+                                    Log.i(TAG, "notEmpty");
+                                    _state = state.approachHuman;
+                                }
+                                break;
 
-                            retrieveCharacteristics(humantoaproach);
+
+                            case approachHuman:
+                                Log.i(TAG, "ApproachHuman");
+                                retrieveCharacteristics(humantoaproach);
+                                ApproachHuman approachHuman = ApproachHumanBuilder.with(qiContext)
+                                        .withHuman(humantoaproach.get(0))
+                                        .build();
+                                approachHuman.async().run();
+
+                                if(approachHuman.async().run().hasError()){
+                                    Mapping mapping = qiContext.getMapping();
+                                    Frame mapFrame = mapping.mapFrame();
+                                    Log.i(TAG, "ToPosition");
+                                    GoTo goTo = GoToBuilder.with(qiContext)
+                                            .withFrame(mapFrame)
+                                            .build();
+                                    goTo.async().run();
+                                    // Run the action synchronously.
+
+                                }
+
+
+                                _state = state.idle;
+                                break;
+
+                            case goToPosition:
+                                break;
                         }
+
+
                     }
 
             }
