@@ -51,6 +51,8 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
     private QiContext _qiContext;
 
     private enum state {
+        mapping,
+        localaize,
         idle,
         approachHuman,
         goToPosition
@@ -71,7 +73,90 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
 
         // Store the provided QiContext.
         this._qiContext = qiContext;
-        startMapping(qiContext);
+        _state = state.mapping;
+        List<Human> humantoaproach = null;
+
+        switch (_state){
+            case mapping:
+                Log.i(TAG, "Mapping");
+                localizeAndMap = LocalizeAndMapBuilder.with(qiContext).build();
+                // Add an on status changed listener on the LocalizeAndMap action to know when the robot has mapped his environment.
+                localizeAndMap.addOnStatusChangedListener(status -> {
+                    switch (status) {
+                        case LOCALIZED:
+                            // Dump the ExplorationMap.
+                            explorationMap = localizeAndMap.dumpMap();
+                            Log.i(TAG, "Robot has mapped his environment.");
+                            // Cancel the LocalizeAndMap action.
+                            localizationAndMapping.requestCancellation();
+                            break;
+                    }
+                });
+                Log.i(TAG, "Mapping...");
+                // Execute the LocalizeAndMap action asynchronously.
+                localizationAndMapping = localizeAndMap.async().run();
+                // Add a lambda to the action execution.
+                localizationAndMapping.thenConsume(future -> {
+                    if (future.hasError()) {
+                        Log.e(TAG, "LocalizeAndMap action finished with error.", future.getError());
+                    } else if (future.isCancelled()) {
+                        _state = state.localaize;
+                        // The LocalizeAndMap action has been cancelled.
+                    }
+                });
+                break;
+            case localaize:
+                Log.i(TAG, "Localazing");
+
+                localize = LocalizeBuilder.with(qiContext)
+                        .withMap(explorationMap)
+                        .build();
+
+                // Add an on status changed listener on the Localize action to know when the robot is localized in the map.
+                localize.addOnStatusChangedListener(status -> {
+                    switch (status) {
+                        case LOCALIZED:
+                            Log.i(TAG, "Robot is localized.");
+                            _state = state.idle;
+                            break;
+                    }
+                });
+
+            case idle:
+                Log.i(TAG, "Idle");
+                SystemClock.sleep(500);
+                humanAwareness = qiContext.getHumanAwareness();
+                humantoaproach = humanAwareness.getHumansAround();
+                if (!humantoaproach.isEmpty()) {
+                    Log.i(TAG, "notEmpty");
+                    _state = state.approachHuman;
+                }
+                break;
+            case approachHuman:
+                Log.i(TAG, "ApproachHuman");
+                retrieveCharacteristics(humantoaproach);
+                ApproachHuman approachHuman = ApproachHumanBuilder.with(qiContext)
+                        .withHuman(humantoaproach.get(0))
+                        .build();
+                approachHuman.async().run();
+
+                if(approachHuman.async().run().hasError()){
+                    _state = state.goToPosition;
+                }
+                _state = state.approachHuman;
+                break;
+            case goToPosition:
+                Mapping mapping = qiContext.getMapping();
+                Frame mapFrame = mapping.mapFrame();
+                Log.i(TAG, "ToPosition");
+                GoTo goTo = GoToBuilder.with(qiContext)
+                        .withFrame(mapFrame)
+                        .build();
+                goTo.async().run();
+
+                _state = state.idle;
+                break;
+        }
 
 
 
@@ -103,6 +188,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                     // Cancel the LocalizeAndMap action.
                     localizationAndMapping.requestCancellation();
                     break;
+
             }
         });
 
