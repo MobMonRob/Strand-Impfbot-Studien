@@ -5,7 +5,7 @@ import static com.airbnb.lottie.L.TAG;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.util.Log;
-import android.widget.Button;
+import android.view.View;
 import android.widget.ImageView;
 
 import com.aldebaran.qi.Future;
@@ -14,12 +14,10 @@ import com.aldebaran.qi.sdk.QiSDK;
 import com.aldebaran.qi.sdk.RobotLifecycleCallbacks;
 import com.aldebaran.qi.sdk.builder.ApproachHumanBuilder;
 import com.aldebaran.qi.sdk.builder.GoToBuilder;
-import com.aldebaran.qi.sdk.builder.HolderBuilder;
 import com.aldebaran.qi.sdk.builder.LocalizeAndMapBuilder;
 import com.aldebaran.qi.sdk.builder.LocalizeBuilder;
 import com.aldebaran.qi.sdk.builder.LookAtBuilder;
 import com.aldebaran.qi.sdk.builder.SayBuilder;
-import com.aldebaran.qi.sdk.builder.TakePictureBuilder;
 import com.aldebaran.qi.sdk.builder.TransformBuilder;
 import com.aldebaran.qi.sdk.design.activity.RobotActivity;
 import com.aldebaran.qi.sdk.object.actuation.Actuation;
@@ -32,26 +30,15 @@ import com.aldebaran.qi.sdk.object.actuation.Localize;
 import com.aldebaran.qi.sdk.object.actuation.LocalizeAndMap;
 import com.aldebaran.qi.sdk.object.actuation.LookAt;
 import com.aldebaran.qi.sdk.object.actuation.Mapping;
-import com.aldebaran.qi.sdk.object.camera.TakePicture;
 import com.aldebaran.qi.sdk.object.conversation.Phrase;
 import com.aldebaran.qi.sdk.object.conversation.Say;
 import com.aldebaran.qi.sdk.object.geometry.Transform;
 import com.aldebaran.qi.sdk.object.geometry.Vector3;
-import com.aldebaran.qi.sdk.object.holder.AutonomousAbilitiesType;
-import com.aldebaran.qi.sdk.object.holder.Holder;
-import com.aldebaran.qi.sdk.object.human.AttentionState;
-import com.aldebaran.qi.sdk.object.human.EngagementIntentionState;
-import com.aldebaran.qi.sdk.object.human.ExcitementState;
-import com.aldebaran.qi.sdk.object.human.Gender;
 import com.aldebaran.qi.sdk.object.human.Human;
-import com.aldebaran.qi.sdk.object.human.PleasureState;
-import com.aldebaran.qi.sdk.object.human.SmileState;
 import com.aldebaran.qi.sdk.object.humanawareness.ApproachHuman;
 import com.aldebaran.qi.sdk.object.humanawareness.HumanAwareness;
-import com.aldebaran.qi.sdk.object.image.TimestampedImageHandle;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 
 public class MainActivity extends RobotActivity implements RobotLifecycleCallbacks {
@@ -64,8 +51,6 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
     private String vacState = "";
     private QiContext qiContext;
     private FreeFrame targetFrame;
-
-    Future<TakePicture> takePictureFuture;
 
     private enum state {
         mapping,
@@ -91,13 +76,27 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         QiSDK.register(this, this);
-
     }
 
     @Override
     public void onRobotFocusGained(QiContext qiContext) {
 
-        takePictureFuture = TakePictureBuilder.with(qiContext).buildAsync();
+        ImageView dhbwLogo = findViewById(R.id.imageViewDhbw);
+        ImageView redCross = findViewById(R.id.imageViewRedCross);
+        ImageView checkMark = findViewById(R.id.imageViewCheckMark);
+
+        runOnUiThread(new Runnable() {
+
+            @Override
+            public void run() {
+
+                dhbwLogo.setVisibility(View.VISIBLE);
+                checkMark.setVisibility(View.INVISIBLE);
+                redCross.setVisibility(View.INVISIBLE);
+
+            }
+        });
+
         _state = state.mapping;
         Mapping mapping;
         List<Human> humantoaproach = null;
@@ -204,7 +203,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
 
                     int timeoutInt = 1;
                     boolean timeout = false;
-                    while (T.isAlive() && timeout == false) {
+                    while (T.isAlive() && !timeout) {
                         timeoutInt++;
                         if (timeoutInt == 20){
                             T.interrupt();
@@ -234,6 +233,19 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
 
                     Log.i(TAG,vacState + " checkVacState");
                     if (vacState.equals("true")){
+
+                        runOnUiThread(new Runnable() {
+
+                            @Override
+                            public void run() {
+
+                                dhbwLogo.setVisibility(View.INVISIBLE);
+                                checkMark.setVisibility(View.VISIBLE);
+                                redCross.setVisibility(View.INVISIBLE);
+
+                            }
+                        });
+
                         Phrase phrase = new Phrase("Everything is fine! Thank you for your cooperation!");
 
                         Say say = SayBuilder.with(qiContext)
@@ -243,6 +255,17 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                         say.run();
                     }
                     if (vacState.equals("false")){
+                        runOnUiThread(new Runnable() {
+
+                            @Override
+                            public void run() {
+
+                                dhbwLogo.setVisibility(View.INVISIBLE);
+                                checkMark.setVisibility(View.INVISIBLE);
+                                redCross.setVisibility(View.VISIBLE);
+
+                            }
+                        });
                         Phrase phrase = new Phrase("Your QR code seems to be not valid, please leave the building immediately!");
 
                         Say say = SayBuilder.with(qiContext)
@@ -256,7 +279,17 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                     _state = state.goToPosition;
                     break;
                 case goToPosition:
+                    runOnUiThread(new Runnable() {
 
+                        @Override
+                        public void run() {
+
+                            dhbwLogo.setVisibility(View.VISIBLE);
+                            checkMark.setVisibility(View.INVISIBLE);
+                            redCross.setVisibility(View.INVISIBLE);
+
+                        }
+                    });
                     Mapping mapping2 = qiContext.getMapping();
                     Frame mapFrame = mapping2.mapFrame();
 
