@@ -51,24 +51,6 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
     private String vacState = "";
     private QiContext qiContext;
     private FreeFrame targetFrame;
-
-    private enum state {
-        mapping,
-        waitForMap,
-        localaize,
-        waitForLocalaize,
-        idle,
-        approachHuman,
-        waitForQrCode,
-        goToPosition,
-        checkVacState,
-        waitForPosition,
-        lookAt,
-        waitForLookAt
-    }
-
-
-
     private state _state;
 
     @Override
@@ -124,7 +106,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                     _state = state.waitForMap;
                     break;
                 case waitForMap:
-                    SystemClock.sleep(100);
+                    SystemClock.sleep(500);
                     Log.i(TAG, "waitforMap");
                     break;
                 case localaize:
@@ -358,6 +340,21 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
     @Override
     public void onRobotFocusRefused(String reason) {
 
+    }
+
+    private enum state {
+        mapping,
+        waitForMap,
+        localaize,
+        waitForLocalaize,
+        idle,
+        approachHuman,
+        waitForQrCode,
+        goToPosition,
+        checkVacState,
+        waitForPosition,
+        lookAt,
+        waitForLookAt
     }
 
 
