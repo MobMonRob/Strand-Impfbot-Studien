@@ -66,6 +66,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
         ImageView dhbwLogo = findViewById(R.id.imageViewDhbw);
         ImageView redCross = findViewById(R.id.imageViewRedCross);
         ImageView checkMark = findViewById(R.id.imageViewCheckMark);
+        ImageView info = findViewById(R.id.imageViewInfo);
 
         runOnUiThread(new Runnable() {
 
@@ -75,6 +76,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                 dhbwLogo.setVisibility(View.VISIBLE);
                 checkMark.setVisibility(View.INVISIBLE);
                 redCross.setVisibility(View.INVISIBLE);
+                info.setVisibility(View.INVISIBLE);
 
             }
         });
@@ -98,7 +100,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                         if (localizationStatus == LocalizationStatus.LOCALIZED) {
                             localizationAndMapping.requestCancellation();
                             explorationMap = localizeAndMap.dumpMap();
-                            _state = state.localaize;
+                            _state = state.localize;
                         }
                     });
                     localizationAndMapping = localizeAndMap.async().run();
@@ -109,7 +111,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                     SystemClock.sleep(500);
                     Log.i(TAG, "waitforMap");
                     break;
-                case localaize:
+                case localize:
                     Log.i(TAG, "Localazing");
                     localize = LocalizeBuilder.with(qiContext)
                             .withMap(explorationMap)
@@ -121,9 +123,9 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                         }
                     });
                     localize.async().run();
-                    _state = state.waitForLocalaize;
+                    _state = state.waitForLocalize;
 
-                case waitForLocalaize:
+                case waitForLocalize:
                     Log.i(TAG, "WaitForLocalazing");
                     SystemClock.sleep(500);
                     actuation = qiContext.getActuation();
@@ -146,7 +148,6 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                     break;
                 case approachHuman:
                     Log.i(TAG, "ApproachHuman");
-
                     ApproachHuman approachHuman = ApproachHumanBuilder.with(qiContext)
                             .withHuman(humantoaproach.get(0))
                             .build();
@@ -161,14 +162,22 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                     {
                         _state = state.goToPosition;
                     }
-                    if(approach.isDone()){
-                        Phrase phrase = new Phrase("Please show me your vaccination certificate. " +
-                                "Just hold your QR code in front of the Camera! You have 20 seconds.");
 
+                    if(approach.isDone()){
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                dhbwLogo.setVisibility(View.INVISIBLE);
+                                checkMark.setVisibility(View.INVISIBLE);
+                                redCross.setVisibility(View.INVISIBLE);
+                                info.setVisibility(View.VISIBLE);
+                            }
+                        });
+                        Phrase phrase = new Phrase("Please show me your vaccination certificate. " +
+                                "Just hold your QR code in front of the smartphone camera! You have 20 seconds.");
                         Say say = SayBuilder.with(qiContext)
                                 .withPhrase(phrase)
                                 .build();
-
                         say.run();
                         _state = state.waitForQrCode;
                     }
@@ -177,8 +186,8 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                 case waitForQrCode:
 
                     Thread T = new Thread(() -> {
-                        TimeServer timeServer = new TimeServer();
-                        vacState = timeServer.run();
+                        QrScanServer qrScanServer = new QrScanServer();
+                        vacState = qrScanServer.run();
                         Log.i(TAG,"running");
                     });
                     T.start();
@@ -190,7 +199,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                         if (timeoutInt == 20){
                             T.interrupt();
                             timeout = true;
-                            Phrase phrase = new Phrase("I did not find any QR Code, please try again!");
+                            Phrase phrase = new Phrase("I did not find any QR Code!");
 
                             Say say = SayBuilder.with(qiContext)
                                     .withPhrase(phrase)
@@ -224,6 +233,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                                 dhbwLogo.setVisibility(View.INVISIBLE);
                                 checkMark.setVisibility(View.VISIBLE);
                                 redCross.setVisibility(View.INVISIBLE);
+                                info.setVisibility(View.INVISIBLE);
 
                             }
                         });
@@ -245,10 +255,12 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                                 dhbwLogo.setVisibility(View.INVISIBLE);
                                 checkMark.setVisibility(View.INVISIBLE);
                                 redCross.setVisibility(View.VISIBLE);
+                                info.setVisibility(View.INVISIBLE);
 
                             }
                         });
-                        Phrase phrase = new Phrase("Your QR code seems to be not valid, please leave the building immediately!");
+                        Phrase phrase = new Phrase("Your QR code seems to be not valid, " +
+                                "please leave the building immediately!");
 
                         Say say = SayBuilder.with(qiContext)
                                 .withPhrase(phrase)
@@ -262,19 +274,18 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
                     break;
                 case goToPosition:
                     runOnUiThread(new Runnable() {
-
                         @Override
                         public void run() {
 
                             dhbwLogo.setVisibility(View.VISIBLE);
                             checkMark.setVisibility(View.INVISIBLE);
                             redCross.setVisibility(View.INVISIBLE);
+                            info.setVisibility(View.INVISIBLE);
 
                         }
                     });
                     Mapping mapping2 = qiContext.getMapping();
                     Frame mapFrame = mapping2.mapFrame();
-
                     Log.i(TAG, "ToPosition");
                     goTo = GoToBuilder.with(qiContext)
                             .withFrame(mapFrame)
@@ -345,8 +356,8 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
     private enum state {
         mapping,
         waitForMap,
-        localaize,
-        waitForLocalaize,
+        localize,
+        waitForLocalize,
         idle,
         approachHuman,
         waitForQrCode,

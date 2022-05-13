@@ -7,7 +7,7 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class TimeServer {
+public class QrScanServer {
     int port = 1755;
     String vacStatus = "";
 
